@@ -7,9 +7,26 @@ SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 # Download MSYS2 installer
 RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-x86_64-20240113.exe' -OutFile 'msys2-installer.exe'
 
-# Install MSYS2 silently
-RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S /DIR=C:\\msys64' -Wait -NoNewWindow; \
-    if (-not (Test-Path 'C:\\msys64\\usr\\bin\\bash.exe')) { throw 'MSYS2 installation failed: bash.exe not found' }
+# Install MSYS2 silently with debugging
+RUN Write-Host 'Running MSYS2 installer...'; \
+    Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S /D=C:\\msys64' -Wait -RedirectStandardOutput 'install.log' -RedirectStandardError 'install.err'; \
+    Write-Host 'Installer output:'; \
+    Get-Content 'install.log'; \
+    Write-Host 'Installer errors (if any):'; \
+    Get-Content 'install.err'; \
+    Write-Host 'Checking MSYS2 installation directory:'; \
+    dir 'C:\\' | Write-Host; \
+    dir 'C:\\msys64' -Recurse | Write-Host; \
+    if (-not (Test-Path 'C:\\msys64\\usr\\bin\\bash.exe')) { \
+        Write-Host 'Checking alternative paths for bash.exe...'; \
+        dir 'C:\\' -Recurse -Include 'bash.exe' | Write-Host; \
+        throw 'MSYS2 installation failed: bash.exe not found in C:\\msys64\\usr\\bin' \
+    }
+
+# Clean up installer
+RUN Remove-Item 'msys2-installer.exe'; \
+    Remove-Item 'install.log' -ErrorAction SilentlyContinue; \
+    Remove-Item 'install.err' -ErrorAction SilentlyContinue
 
 # Wait for bash.exe with retry
 RUN $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; \
@@ -23,14 +40,12 @@ RUN $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; \
     if (-not (Test-Path $bashPath)) { throw "MSYS2 installation failed: bash.exe not found after $maxWait attempts." } \
     else { Write-Host 'Found bash.exe' }
 
-# Clean up installer
-RUN Remove-Item 'msys2-installer.exe'
-
 # Update PATH
 ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;%PATH%"
 
-# Update MSYS2 packages
-RUN & 'C:\\msys64\\usr\\bin\\bash.exe' -c 'pacman -Syu --noconfirm'
+# Update MSYS2 packages and clean cache
+RUN & 'C:\\msys64\\usr\\bin\\bash.exe' -c 'pacman -Syu --noconfirm'; \
+    Remove-Item -Recurse -Force 'C:\\msys64\\var\\cache\\pacman\\pkg' -ErrorAction SilentlyContinue
 
 # Bash sanity check
 RUN $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; \
