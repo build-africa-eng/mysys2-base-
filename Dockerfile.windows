@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.0-windows
-FROM africanfuture/windows-devbox-base
+FROM africanfuture/windows-devbox-base:latest
 
 # Use PowerShell as shell
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
@@ -15,16 +15,21 @@ RUN try { \
 RUN Write-Host "Starting MSYS2 installation at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"; \
     Write-Host 'Note: Set-MpPreference unavailable in Server Core; Defender may interfere...'; \
     $process = Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S' -PassThru -RedirectStandardOutput 'install.log' -RedirectStandardError 'install.err'; \
-    Write-Host "Waiting for installer (timeout 300s)..."; \
-    $timeout = 300; \
+    Write-Host "Waiting for installer (timeout 600s)..."; \
+    $installTimeout = 600; \
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew(); \
-    while (-not $process.HasExited -and $stopwatch.Elapsed.TotalSeconds -lt $timeout) { \
+    while (-not $process.HasExited -and $stopwatch.Elapsed.TotalSeconds -lt $installTimeout) { \
         Start-Sleep -Seconds 1; \
+        if (Test-Path 'C:\\msys64') { Write-Host "MSYS2 directory detected at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"; dir 'C:\\msys64' | Write-Host } \
     }; \
     if (-not $process.HasExited) { \
         Write-Host "Installer timed out at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"; \
-        Stop-Process -Id $process.Id -Force; \
-        throw 'MSYS2 installer timed out after 300 seconds' \
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; \
+        Write-Host 'Installer output so far:'; \
+        Get-Content 'install.log' -ErrorAction SilentlyContinue | Write-Host; \
+        Write-Host 'Installer errors (if any):'; \
+        Get-Content 'install.err' -ErrorAction SilentlyContinue | Write-Host; \
+        throw 'MSYS2 installer timed out after 600 seconds' \
     }; \
     Write-Host "Installer completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') with exit code: $($process.ExitCode)"; \
     Write-Host 'Installer output:'; \
