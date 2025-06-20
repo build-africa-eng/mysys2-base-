@@ -1,8 +1,4 @@
-mkdir -p .github/workflows
-mv docker.yml .github/workflows/docker.yml
-git add .github/workflows/docker.yml
-git commit -m "Add Docker build workflow"
-git push origin mainname: Build and Push MSYS2 Base Images
+name: Build and Push MSYS2 Base Images
 
 on:
   push:
