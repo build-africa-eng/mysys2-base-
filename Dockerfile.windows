@@ -1,26 +1,36 @@
 # Dockerfile.windows
+# This version uses the official .exe installer for a robust and reliable setup.
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
-# Set the default shell to PowerShell for robust commands
+# Use PowerShell for the initial setup commands
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 
-# --- SOLUTION ---
-# Download, extract, and clean up in a single, unambiguous RUN command.
-RUN curl.exe -L -o msys2.tar.zst https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-base-x86_64-20240113.tar.zst; tar.exe -I zstd -xf msys2.tar.zst -C C:\; Remove-Item msys2.tar.zst
+# 1. Download the official MSYS2 installer executable. We use Invoke-WebRequest for reliability.
+RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-x86_64-20240113.exe' -OutFile 'msys2-installer.exe'
 
-# Switch the default shell to MSYS2 bash for subsequent commands
+# 2. Run the installer silently. The /S flag ensures no UI, and -Wait ensures the command completes before the next step.
+RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S' -Wait
+
+# 3. Clean up the installer file to keep the image small
+RUN Remove-Item 'msys2-installer.exe'
+
+# 4. IMPORTANT: Add the MSYS2 binary path to the Windows PATH environment variable.
+# This ensures that 'bash.exe', 'pacman', etc., can be found by the system.
+ENV PATH="C:\\msys64\\usr\\bin;${env:PATH}"
+
+# 5. Switch the shell to MSYS2 bash. This will now work correctly.
 SHELL ["C:\\msys64\\usr\\bin\\bash.exe", "-lc"]
 
-# Initialize the pacman keyring
-RUN pacman-key --init
+# 6. Initialize pacman keyring and populate with default keys.
+RUN pacman-key --init && \
+    pacman-key --populate msys2
 
-# Populate the keyring with the default MSYS2 keys
-RUN pacman-key --populate msys2
+# 7. Update the package database and core system packages.
+# This is run twice as per official MSYS2 recommendation.
+RUN pacman -Syuu --noconfirm
+RUN pacman -Syuu --noconfirm
 
-# Update the system package database and core packages. Run twice as recommended by MSYS2.
-RUN pacman -Syuu --noconfirm && pacman -Syuu --noconfirm
-
-# Install the required development packages
+# 8. Install the required development toolchains and packages.
 RUN pacman -S --noconfirm \
       base-devel \
       git \
@@ -29,4 +39,5 @@ RUN pacman -S --noconfirm \
       mingw-w64-x86_64-toolchain \
       mingw-w64-x86_64-cmake
 
+# 9. Set the default command to launch an interactive bash shell.
 CMD ["C:\\msys64\\usr\\bin\\bash.exe", "-l"]
