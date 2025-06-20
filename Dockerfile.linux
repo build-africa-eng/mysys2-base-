@@ -1,0 +1,24 @@
+# Dockerfile.linux
+# A public, reliable base image for Linux using Arch Linux.
+# Arch Linux is the foundation of MSYS2 and provides the same tooling.
+FROM archlinux:latest
+
+# On a fresh Arch image, we must initialize the pacman keyring
+# before we can install packages. Then, update the system.
+RUN pacman-key --init && \
+    pacman-key --populate archlinux && \
+    pacman -Syu --noconfirm
+
+# Install the exact same development tools for cross-compilation.
+# Note: 'mingw-w64-cmake' is an MSYS2-specific package name. On Arch,
+# we install the standard 'cmake' and the 'mingw-w64-toolchain'.
+RUN pacman -S --noconfirm \
+      base-devel \
+      git \
+      zip \
+      unzip \
+      mingw-w64-toolchain \
+      cmake
+
+# Set the default command to a bash shell.
+CMD ["/bin/bash"]
