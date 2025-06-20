@@ -1,37 +1,26 @@
-# Dockerfile.windows
-# This version uses the official .exe installer for a robust and reliable setup.
+# Dockerfile.windows (MSYS2 Install Only)
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
-# Use PowerShell for the initial setup commands
+# Use PowerShell initially
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 
 # 1. Download MSYS2 installer
 RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-x86_64-20240113.exe' -OutFile 'msys2-installer.exe'
 
-# 2. Install MSYS2 silently to C:\msys64
-RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S', 'InstallLocation=C:\msys64' -Wait
+# 2. Install MSYS2 silently and wait for bash.exe to appear
+RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S', 'InstallLocation=C:\\msys64' -Wait; `
+    Write-Output "Waiting for C:\\msys64\\usr\\bin\\bash.exe to exist..."; `
+    $timeout = 60; while (!(Test-Path "C:\\msys64\\usr\\bin\\bash.exe") -and $timeout -gt 0) { Start-Sleep -Seconds 2; $timeout-- }; `
+    if (!(Test-Path "C:\\msys64\\usr\\bin\\bash.exe")) { throw "MSYS2 did not install correctly." }
 
-# 3. Sleep briefly to ensure installation is complete
-RUN Start-Sleep -Seconds 5
-
-# 4. Clean up installer
+# 3. Clean up installer
 RUN Remove-Item 'msys2-installer.exe'
 
-# ✅ 5. Set MSYS2 bin paths to PATH (used for both PowerShell & bash context)
+# 4. Extend PATH
 ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;${PATH}"
 
-# 6. Initialize and populate pacman keyring
-RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman-key --init && pacman-key --populate msys2"
+# 5. Sanity check: Show MSYS2 bash version
+RUN C:\\msys64\\usr\\bin\\bash.exe --version
 
-# 7. Update packages (twice as per MSYS2 instructions)
-RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman -Syuu --noconfirm || true"
-RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman -Syuu --noconfirm || true"
-
-# 8. Install common development tools
-RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman -S --noconfirm base-devel git zip unzip mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake"
-
-# 9. Switch to bash for subsequent instructions
-SHELL ["C:\\msys64\\usr\\bin\\bash.exe", "-lc"]
-
-# 10. Set default command
-CMD ["bash", "-l"]
+# Optional: Start MSYS2 bash shell by default
+CMD ["C:\\msys64\\usr\\bin\\bash.exe", "-l"]
