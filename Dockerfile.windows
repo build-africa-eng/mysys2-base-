@@ -9,30 +9,39 @@ SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-x86_64-20240113.exe' -OutFile 'msys2-installer.exe'
 
 # 2. Run the installer silently.
-RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S' -Wait
+# Use cmd.exe with /S for silent execution to ensure it works correctly in a Docker context.
+# Also, explicitly ensure the installation directory. The default is C:\msys64.
+# After installation, MSYS2 might need its internal setup, which usually happens on first run.
+# Adding a small timeout/sleep might give the system time to recognize the new files.
+RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S', 'InstallLocation=C:\msys64' -Wait; `
+    Remove-Item 'msys2-installer.exe'; `
+    Start-Sleep -Seconds 5 # Add a short delay to allow file system/PATH to settle
 
-# 3. Clean up the installer file.
-RUN Remove-Item 'msys2-installer.exe'
+# 3. Permanently add MSYS2 bin paths to the Windows system PATH.
+# This ensures it's available for subsequent SHELL changes and commands.
+# We are adding both C:\msys64\usr\bin (for bash) and C:\msys64\mingw64\bin (for toolchains like gcc/g++)
+# The syntax below directly modifies the machine-wide PATH environment variable.
+RUN $newPath = "C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;" + [Environment]::GetEnvironmentVariable("PATH", [EnvironmentVariableTarget]::Machine); `
+    [Environment]::SetEnvironmentVariable("PATH", $newPath, [EnvironmentVariableTarget]::Machine)
 
-# 4. Add the MSYS2 binary path to the Windows PATH environment variable.
-ENV PATH="C:\\msys64\\usr\\bin;${PATH}"
-
-# 5. Switch the shell to MSYS2 bash.
+# 4. Switch the shell to MSYS2 bash.
+# This SHELL command will now benefit from the updated system PATH.
 SHELL ["C:\\msys64\\usr\\bin\\bash.exe", "-lc"]
 
-# 6. Initialize pacman keyring (separated for reliability on Windows).
+# 5. Initialize pacman keyring.
+# This step and subsequent pacman commands should now work correctly.
 RUN pacman-key --init
 
-# 7. Populate with default keys (separated for reliability on Windows).
+# 6. Populate with default keys.
 RUN pacman-key --populate msys2
 
-# 8. Update the package database and core system packages.
+# 7. Update the package database and core system packages.
 RUN pacman -Syuu --noconfirm
 
-# 9. Run the second update as per official MSYS2 recommendation.
+# 8. Run the second update as per official MSYS2 recommendation.
 RUN pacman -Syuu --noconfirm
 
-# 10. Install the required development toolchains and packages.
+# 9. Install the required development toolchains and packages.
 RUN pacman -S --noconfirm \
       base-devel \
       git \
@@ -41,5 +50,5 @@ RUN pacman -S --noconfirm \
       mingw-w64-x86_64-toolchain \
       mingw-w64-x86_64-cmake
 
-# 11. Set the default command to launch an interactive bash shell.
+# 10. Set the default command to launch an interactive bash shell.
 CMD ["C:\\msys64\\usr\\bin\\bash.exe", "-l"]
