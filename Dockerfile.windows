@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.0-windows
-FROM mcr.microsoft.com/windows:20H2
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
 # Use PowerShell as shell
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
@@ -11,10 +11,9 @@ RUN try { \
         throw "Failed to download MSYS2 installer: $_" \
     }
 
-# Install MSYS2 with timeout and Defender disabled
+# Install MSYS2 with timeout and debugging
 RUN Write-Host "Starting MSYS2 installation at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"; \
-    Write-Host 'Disabling Windows Defender real-time protection...'; \
-    Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue; \
+    Write-Host 'Note: Set-MpPreference unavailable in Server Core; Defender may interfere...'; \
     $process = Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S' -PassThru -RedirectStandardOutput 'install.log' -RedirectStandardError 'install.err'; \
     Write-Host "Waiting for installer (timeout 300s)..."; \
     $timeout = 300; \
@@ -56,10 +55,10 @@ RUN Write-Host "Starting MSYS2 installation at $(Get-Date -Format 'yyyy-MM-dd HH
         } \
     }; \
     Write-Host "Verifying bash.exe persistence after delay at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"; \
-    Start-Sleep -Seconds 5; \
+    Start-Sleep -Seconds 10; \
     if (-not (Test-Path "$msysPath\\usr\\bin\\bash.exe")) { throw 'bash.exe was removed after installation!' }; \
-    Write-Host 'Re-enabling Windows Defender real-time protection...'; \
-    Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction SilentlyContinue
+    Write-Host "Checking Defender events..."; \
+    Get-EventLog -LogName 'Microsoft-Windows-Windows Defender/Operational' -ErrorAction SilentlyContinue | Where-Object { $_.EventID -eq 1006 -or $_.EventID -eq 1008 } | Select-Object TimeGenerated, Message | Write-Host
 
 # Clean up installer
 RUN Remove-Item 'msys2-installer.exe'; \
