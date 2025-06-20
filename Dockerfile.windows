@@ -17,29 +17,21 @@ RUN Start-Sleep -Seconds 5
 # 4. Clean up installer
 RUN Remove-Item 'msys2-installer.exe'
 
-# 5. Permanently add MSYS2 bin paths to the Windows system PATH.
-# This ensures it's available for subsequent PowerShell commands AND
-# explicitly calling bash.exe until SHELL is changed.
-RUN $newPath = "C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;" + [Environment]::GetEnvironmentVariable("PATH", [EnvironmentVariableTarget]::Machine); `
-    [Environment]::SetEnvironmentVariable("PATH", $newPath, [EnvironmentVariableTarget]::Machine)
+# ✅ 5. Set MSYS2 bin paths to PATH (used for both PowerShell & bash context)
+ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;${PATH}"
 
-# --- CRITICAL CHANGE: Perform initial bash commands via PowerShell ---
-
-# 6. Initialize and populate pacman keyring using powershell to call bash.
-# We explicitly call C:\msys64\usr\bin\bash.exe -lc for these commands.
+# 6. Initialize and populate pacman keyring
 RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman-key --init && pacman-key --populate msys2"
 
-# 7. Update packages (twice as per MSYS2 instructions) using powershell to call bash.
+# 7. Update packages (twice as per MSYS2 instructions)
 RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman -Syuu --noconfirm || true"
 RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman -Syuu --noconfirm || true"
 
-# 8. Install dev tools using powershell to call bash.
+# 8. Install common development tools
 RUN C:\\msys64\\usr\\bin\\bash.exe -lc "pacman -S --noconfirm base-devel git zip unzip mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake"
 
-# --- AFTER initial setup, now change default SHELL ---
-
-# 9. Switch to bash shell for subsequent instructions.
+# 9. Switch to bash for subsequent instructions
 SHELL ["C:\\msys64\\usr\\bin\\bash.exe", "-lc"]
 
-# 10. Default command for the container.
+# 10. Set default command
 CMD ["bash", "-l"]
