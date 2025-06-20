@@ -11,6 +11,7 @@ RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/do
 RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S', 'InstallLocation=C:\\msys64' -Wait
 
 # 3. Wait for C:\msys64\usr\bin\bash.exe to exist
+# Use backslashes (\) for Dockerfile line continuation in RUN commands.
 RUN powershell -Command " `
   $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; `
   $maxWait = 30; `
