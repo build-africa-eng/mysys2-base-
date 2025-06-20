@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.0-windows
-FROM mcr.microsoft.com/windows:ltsc2022
+FROM mcr.microsoft.com/windows:20H2
 
 # Use PowerShell as shell
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
@@ -49,7 +49,7 @@ RUN Write-Host "Starting MSYS2 installation at $(Get-Date -Format 'yyyy-MM-dd HH
             Write-Host "Running msys2_shell.cmd at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"; \
             & "$msysPath\\msys2_shell.cmd" -defterm -no-start -c 'exit'; \
             Write-Host "Checking for bash.exe after initialization at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"; \
-            if (Test-Path "$msysPath\\usr\\bin\\bash.exe") { Write-Host 'bash.exe found after initialization with exit code: $LASTEXITCODE" } \
+            if (Test-Path "$msysPath\\usr\\bin\\bash.exe") { Write-Host 'bash.exe found after initialization' } \
             else { throw 'MSYS2 initialization failed: bash.exe not found in $msysPath\\usr\\bin' } \
         } else { \
             throw 'MSYS2 installation failed: msys2_shell.cmd not found in $msysPath' \
