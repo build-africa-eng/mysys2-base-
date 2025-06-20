@@ -32,7 +32,7 @@ jobs:
             africanfuture/msys2-base:linux-latest
           platforms: linux/amd64
 
-  build-windows:
+build-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -44,23 +44,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # --- SOLUTION ---
+      # Temporarily simplify this step to see the real error from Docker.
       - name: Build image (Windows)
         run: |
           $env:DOCKER_BUILDKIT = "0"
-          $buildOutput = docker build --isolation=process -f Dockerfile.windows -t africanfuture/msys2-base:windows . 2>&1
-          $buildOutput | Out-File -FilePath build.log
-          if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE" }
+          docker build --isolation=process -f Dockerfile.windows -t africanfuture/msys2-base:windows .
         shell: powershell
 
       - name: Push image (Windows)
+        # This step will only run if the build succeeds.
+        if: success()
         run: |
           docker tag africanfuture/msys2-base:windows africanfuture/msys2-base:windows-latest
           docker push africanfuture/msys2-base:windows
           docker push africanfuture/msys2-base:windows-latest
-        shell: powershell
-
-      - name: Capture build output on failure (Windows)
-        if: failure()
-        run: |
-          Get-Content build.log
         shell: powershell
