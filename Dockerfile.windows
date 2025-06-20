@@ -15,8 +15,8 @@ RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S' -Wait
 RUN Remove-Item 'msys2-installer.exe'
 
 # 4. IMPORTANT: Add the MSYS2 binary path to the Windows PATH environment variable.
-# This ensures that 'bash.exe', 'pacman', etc., can be found by the system.
-ENV PATH="C:\\msys64\\usr\\bin;${env:PATH}"
+# This now uses the correct Dockerfile ENV syntax for variable expansion.
+ENV PATH="C:\\msys64\\usr\\bin;${PATH}"
 
 # 5. Switch the shell to MSYS2 bash. This will now work correctly.
 SHELL ["C:\\msys64\\usr\\bin\\bash.exe", "-lc"]
