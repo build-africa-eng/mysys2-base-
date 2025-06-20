@@ -1,28 +1,27 @@
 # Dockerfile.windows
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
-# Add PowerShell to the path for easier commands
+# Set the default shell to PowerShell for robust commands
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 
-# Download and extract MSYS2 from the tar archive
-RUN curl.exe -L -o msys2.tar.zst https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-base-x86_64-20240113.tar.zst; `
-    tar.exe -I zstd -xf msys2.tar.zst -C C:\; `
-    Remove-Item msys2.tar.zst
+# --- SOLUTION ---
+# Download, extract, and clean up MSYS2 in a single RUN instruction.
+# Note the backtick (`) at the end of each line to continue the command.
+RUN curl.exe -L -o msys2.tar.zst https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-base-x86_64-20240113.tar.zst; `tar.exe -I zstd -xf msys2.tar.zst -C C:\; `Remove-Item msys2.tar.zst
 
-# Set the default shell to MSYS2 bash for subsequent RUN commands
+# Switch the default shell to MSYS2 bash for subsequent commands
 SHELL ["C:\\msys64\\usr\\bin\\bash.exe", "-lc"]
 
-# --- SOLUTION ---
-# 1. Initialize the pacman keyring. This creates the necessary GPG directory structure.
+# Initialize the pacman keyring
 RUN pacman-key --init
 
-# 2. Populate the keyring with the default MSYS2 keys.
+# Populate the keyring with the default MSYS2 keys
 RUN pacman-key --populate msys2
 
-# 3. Update the system package database and core packages. Run twice as recommended by MSYS2.
+# Update the system package database and core packages. Run twice as recommended by MSYS2.
 RUN pacman -Syuu --noconfirm && pacman -Syuu --noconfirm
 
-# 4. Install the required development packages.
+# Install the required development packages
 RUN pacman -S --noconfirm \
       base-devel \
       git \
