@@ -11,25 +11,33 @@ RUN try { \
         throw "Failed to download MSYS2 installer: $_" \
     }
 
-# Install MSYS2 silently with debugging
-RUN Write-Host 'Running MSYS2 installer...'; \
+# Disable Windows Defender real-time protection and install MSYS2
+RUN Write-Host 'Disabling Windows Defender real-time protection...'; \
+    Set-MpPreference -DisableRealtimeMonitoring $true; \
+    Write-Host 'Running MSYS2 installer...'; \
     Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S /D=C:\\msys64' -Wait -RedirectStandardOutput 'install.log' -RedirectStandardError 'install.err'; \
     Write-Host 'Installer output:'; \
     Get-Content 'install.log' -ErrorAction SilentlyContinue | Write-Host; \
     Write-Host 'Installer errors (if any):'; \
     Get-Content 'install.err' -ErrorAction SilentlyContinue | Write-Host; \
-    Write-Host 'Checking for MSYS2 directory:'; \
+    Write-Host 'Checking MSYS2 directory after installation:'; \
     if (Test-Path 'C:\\msys64') { dir 'C:\\msys64' | Write-Host } else { Write-Host 'C:\msys64 not found' }; \
+    Write-Host 'Checking for bash.exe after installation:'; \
+    if (Test-Path 'C:\\msys64\\usr\\bin\\bash.exe') { Write-Host 'bash.exe found' } else { Write-Host 'bash.exe not found' }; \
     if (-not (Test-Path 'C:\\msys64\\usr\\bin\\bash.exe')) { \
-        Write-Host 'MSYS2 installation incomplete, running initialization...'; \
+        Write-Host 'Running MSYS2 initialization...'; \
         if (Test-Path 'C:\\msys64\\msys2_shell.cmd') { \
+            Write-Host 'Running msys2_shell.cmd to initialize...'; \
             & 'C:\\msys64\\msys2_shell.cmd' -defterm -no-start -c 'exit'; \
+            Write-Host 'Checking for bash.exe after initialization:'; \
             if (Test-Path 'C:\\msys64\\usr\\bin\\bash.exe') { Write-Host 'bash.exe found after initialization' } \
             else { throw 'MSYS2 initialization failed: bash.exe not found in C:\\msys64\\usr\\bin' } \
         } else { \
             throw 'MSYS2 installation failed: msys2_shell.cmd not found in C:\\msys64' \
         } \
-    } else { Write-Host 'bash.exe found' }
+    }; \
+    Write-Host 'Re-enabling Windows Defender real-time protection...'; \
+    Set-MpPreference -DisableRealtimeMonitoring $false
 
 # Clean up installer
 RUN Remove-Item 'msys2-installer.exe'; \
