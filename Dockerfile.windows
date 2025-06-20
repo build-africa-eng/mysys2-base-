@@ -20,7 +20,7 @@ RUN Remove-Item 'msys2-installer.exe'
 
 # 5. Permanently add MSYS2 bin paths to the Windows system PATH.
 # This ensures it's available for subsequent SHELL changes and commands.
-# We are adding both C:\msys64\usr\bin (for bash) and C:\msys64\mingw64\bin (for toolchains like gcc/g++)
+# We are adding both C:\msys64\usr\bin (for bash) and C:\msys64\mingw64\bin (for toolchains like gcc/g+)
 # The syntax below directly modifies the machine-wide PATH environment variable.
 RUN $newPath = "C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;" + [Environment]::GetEnvironmentVariable("PATH", [EnvironmentVariableTarget]::Machine); `
     [Environment]::SetEnvironmentVariable("PATH", $newPath, [EnvironmentVariableTarget]::Machine)
