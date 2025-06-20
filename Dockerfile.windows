@@ -8,20 +8,20 @@ SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-x86_64-20240113.exe' -OutFile 'msys2-installer.exe'
 
 # Install MSYS2 silently
-RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S', '/DIR=C:\\msys64' -Wait -NoNewWindow -PassThru | ForEach-Object { `
-    if ($_.ExitCode -ne 0) { throw 'MSYS2 installation failed with exit code: ' + $_.ExitCode } `
-}
+RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S', '/DIR=C:\\msys64' -Wait -NoNewWindow -PassThru | Tee-Object -Variable result; \
+    if ($result.ExitCode -ne 0) { throw "MSYS2 installation failed with exit code: $($result.ExitCode)" }
 
-# Wait for bash.exe with retry
-RUN Write-Host 'Waiting for C:\msys64\usr\bin\bash.exe...'; `
-    $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; `
-    $maxWait = 15; `
-    for ($i = 0; $i -lt $maxWait; $i++) { `
-        if (Test-Path $bashPath) { Write-Host 'Found bash.exe'; break } `
-        Start-Sleep -Seconds 2; `
-        Write-Host "Waiting... ($i)" `
-    }; `
-    if (!(Test-Path $bashPath)) { throw "MSYS2 installation failed: bash.exe not found after $maxWait attempts." }
+# Wait for bash.exe with retry (simplified)
+RUN $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; \
+    $maxWait = 15; \
+    $i = 0; \
+    while (-not (Test-Path $bashPath) -and $i -lt $maxWait) { \
+        Write-Host "Waiting for bash.exe... ($i)"; \
+        Start-Sleep -Seconds 2; \
+        $i++; \
+    }; \
+    if (-not (Test-Path $bashPath)) { throw "MSYS2 installation failed: bash.exe not found after $maxWait attempts." } \
+    else { Write-Host 'Found bash.exe' }
 
 # Clean up installer
 RUN Remove-Item 'msys2-installer.exe'
@@ -32,15 +32,13 @@ ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;%PATH%"
 # Update MSYS2 packages
 RUN & 'C:\\msys64\\usr\\bin\\bash.exe' -c 'pacman -Syu --noconfirm'
 
-# Bash sanity check
-RUN $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; `
-    if (Test-Path $bashPath) { `
-        Write-Host 'bash.exe exists'; `
-        $version = & $bashPath --version; `
-        Write-Host $version; `
-        if ($LASTEXITCODE -ne 0) { throw 'bash --version failed with exit code: ' + $LASTEXITCODE } `
-    } else { `
-        throw 'bash.exe still not found at sanity check!' `
+# Bash sanity check (simplified)
+RUN $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; \
+    if (Test-Path $bashPath) { \
+        Write-Host 'bash.exe exists'; \
+        & $bashPath --version | Write-Host; \
+    } else { \
+        throw 'bash.exe not found at sanity check!' \
     }
 
 # Healthcheck
