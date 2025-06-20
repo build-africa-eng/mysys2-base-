@@ -5,9 +5,8 @@ FROM mcr.microsoft.com/windows/servercore:ltsc2022
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 
 # --- SOLUTION ---
-# Download, extract, and clean up MSYS2 in a single RUN instruction.
-# Note the backtick (`) at the end of each line to continue the command.
-RUN curl.exe -L -o msys2.tar.zst https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-base-x86_64-20240113.tar.zst; `tar.exe -I zstd -xf msys2.tar.zst -C C:\; `Remove-Item msys2.tar.zst
+# Download, extract, and clean up in a single, unambiguous RUN command.
+RUN curl.exe -L -o msys2.tar.zst https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-base-x86_64-20240113.tar.zst; tar.exe -I zstd -xf msys2.tar.zst -C C:\; Remove-Item msys2.tar.zst
 
 # Switch the default shell to MSYS2 bash for subsequent commands
 SHELL ["C:\\msys64\\usr\\bin\\bash.exe", "-lc"]
