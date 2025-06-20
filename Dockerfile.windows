@@ -5,40 +5,36 @@ FROM mcr.microsoft.com/windows/servercore:ltsc2022
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 
 # Download MSYS2 installer
-RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-x86_64-20240113.exe' -OutFile 'msys2-installer.exe'
+RUN try { \
+        Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe' -OutFile 'msys2-installer.exe' \
+    } catch { \
+        throw "Failed to download MSYS2 installer: $_" \
+    }
 
 # Install MSYS2 silently with debugging
 RUN Write-Host 'Running MSYS2 installer...'; \
     Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S /D=C:\\msys64' -Wait -RedirectStandardOutput 'install.log' -RedirectStandardError 'install.err'; \
     Write-Host 'Installer output:'; \
-    Get-Content 'install.log'; \
+    Get-Content 'install.log' -ErrorAction SilentlyContinue | Write-Host; \
     Write-Host 'Installer errors (if any):'; \
-    Get-Content 'install.err'; \
-    Write-Host 'Checking MSYS2 installation directory:'; \
-    dir 'C:\\' | Write-Host; \
-    dir 'C:\\msys64' -Recurse | Write-Host; \
+    Get-Content 'install.err' -ErrorAction SilentlyContinue | Write-Host; \
+    Write-Host 'Checking for MSYS2 directory:'; \
+    if (Test-Path 'C:\\msys64') { dir 'C:\\msys64' | Write-Host } else { Write-Host 'C:\msys64 not found' }; \
     if (-not (Test-Path 'C:\\msys64\\usr\\bin\\bash.exe')) { \
-        Write-Host 'Checking alternative paths for bash.exe...'; \
-        dir 'C:\\' -Recurse -Include 'bash.exe' | Write-Host; \
-        throw 'MSYS2 installation failed: bash.exe not found in C:\\msys64\\usr\\bin' \
-    }
+        Write-Host 'MSYS2 installation incomplete, running initialization...'; \
+        if (Test-Path 'C:\\msys64\\msys2_shell.cmd') { \
+            & 'C:\\msys64\\msys2_shell.cmd' -defterm -no-start -c 'exit'; \
+            if (Test-Path 'C:\\msys64\\usr\\bin\\bash.exe') { Write-Host 'bash.exe found after initialization' } \
+            else { throw 'MSYS2 initialization failed: bash.exe not found in C:\\msys64\\usr\\bin' } \
+        } else { \
+            throw 'MSYS2 installation failed: msys2_shell.cmd not found in C:\\msys64' \
+        } \
+    } else { Write-Host 'bash.exe found' }
 
 # Clean up installer
 RUN Remove-Item 'msys2-installer.exe'; \
     Remove-Item 'install.log' -ErrorAction SilentlyContinue; \
     Remove-Item 'install.err' -ErrorAction SilentlyContinue
-
-# Wait for bash.exe with retry
-RUN $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; \
-    $maxWait = 15; \
-    $i = 0; \
-    while (-not (Test-Path $bashPath) -and $i -lt $maxWait) { \
-        Write-Host "Waiting for bash.exe... ($i)"; \
-        Start-Sleep -Seconds 2; \
-        $i++; \
-    }; \
-    if (-not (Test-Path $bashPath)) { throw "MSYS2 installation failed: bash.exe not found after $maxWait attempts." } \
-    else { Write-Host 'Found bash.exe' }
 
 # Update PATH
 ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;%PATH%"
