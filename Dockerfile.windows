@@ -1,7 +1,7 @@
 # Dockerfile.windows (MSYS2 Install Only)
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
-# Use PowerShell initially
+# Use PowerShell shell initially
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 
 # 1. Download MSYS2 installer
@@ -10,25 +10,24 @@ RUN Invoke-WebRequest -Uri 'https://github.com/msys2/msys2-installer/releases/do
 # 2. Install MSYS2 silently
 RUN Start-Process -FilePath '.\\msys2-installer.exe' -ArgumentList '/S', 'InstallLocation=C:\\msys64' -Wait
 
-# 3. Wait for C:\msys64\usr\bin\bash.exe to exist
-# Use backslashes (\) for Dockerfile line continuation in RUN commands.
-RUN powershell -Command " `
-  $bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; `
-  $maxWait = 30; `
-  for ($i = 0; $i -lt $maxWait; $i++) { `
-    if (Test-Path $bashPath) { exit 0 } `
-    Start-Sleep -Seconds 2 `
-  }; `
-  throw 'MSYS2 installation failed: bash.exe not found after waiting.' "
+# 3. Wait until bash.exe is available (safe wait loop)
+RUN powershell -Command `
+  "$bashPath = 'C:\\msys64\\usr\\bin\\bash.exe'; `
+   $maxWait = 30; `
+   for ($i = 0; $i -lt $maxWait; $i++) { `
+     if (Test-Path $bashPath) { exit 0 } `
+     Start-Sleep -Seconds 2 `
+   }; `
+   throw 'MSYS2 installation failed: bash.exe not found after waiting.'"
 
 # 4. Clean up installer
 RUN Remove-Item 'msys2-installer.exe'
 
-# 5. Extend PATH for future layers and shell usage
+# 5. Extend PATH permanently
 ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;${PATH}"
 
-# 6. Sanity check: Show MSYS2 bash version
+# 6. Sanity check: bash version
 RUN C:\\msys64\\usr\\bin\\bash.exe --version
 
-# 7. Optional: Launch MSYS2 bash shell on container start
+# 7. Default command on container start
 CMD ["C:\\msys64\\usr\\bin\\bash.exe", "-l"]
