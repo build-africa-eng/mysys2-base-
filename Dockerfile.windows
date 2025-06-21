@@ -1,42 +1,30 @@
+# escape=`
+
 FROM africanfuture/windows-devbox-base
-
-# Use PowerShell for download steps
-
-SHELL ["powershell", "-Command"]
-
-Download MSYS2 installer
-
-RUN $ProgressPreference = 'SilentlyContinue'; ` Invoke-WebRequest -Uri "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20240313.exe" -OutFile "C:\msys2.exe"
-
-Switch back to CMD shell for installation and post-install tasks
 
 SHELL ["cmd", "/S", "/C"]
 
-Install MSYS2 silently
+# Download MSYS2 installer using powershell safely inside CMD context
+RUN powershell.exe -Command "Invoke-WebRequest -Uri https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20240313.exe -OutFile C:\\msys2.exe"
 
+# Install MSYS2
 RUN C:\msys2.exe install --root C:\msys64 --confirm-command || exit 0
 
-Remove installer
-
+# Delete installer
 RUN del C:\msys2.exe
 
-Update MSYS2 (two phases)
+# Update MSYS2 (double pass)
+RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm || true"
+RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm || true"
 
-RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm || true" RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm || true"
-
-Install development toolchains and languages
-
+# Install dev tools and languages
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm base-devel git cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-go mingw-w64-x86_64-rust mingw-w64-x86_64-nodejs mingw-w64-x86_64-python mingw-w64-x86_64-openjdk mingw-w64-x86_64-mono"
 
-Clean pacman cache
-
+# Clean pacman cache
 RUN C:\msys64\usr\bin\bash.exe -l -c "yes | pacman -Scc"
 
-Add MSYS2 and MinGW binaries to PATH
+# Set environment path
+ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;%PATH%"
 
-ENV PATH="C:\msys64\usr\bin;C:\msys64\mingw64\bin;%PATH%"
-
-Default to CMD
-
+# Default shell
 CMD ["cmd.exe"]
-
