@@ -2,26 +2,28 @@ FROM africanfuture/windows-devbox-base
 
 SHELL ["cmd", "/S", "/C"]
 
-# Download MSYS2 installer using GitHub's latest stable release link
-RUN curl.exe -L -o C:\Temp\msys2.exe https://github.com/msys2/msys2-installer/releases/latest/download/msys2-x86_64.exe
+# Create Temp folder then download MSYS2 installer
+RUN mkdir C:\Temp && curl.exe -L -o C:\Temp\msys2.exe https://github.com/msys2/msys2-installer/releases/latest/download/msys2-x86_64.exe
 
-# Install MSYS2 silently
+# Run the installer (silent mode, install to C:\msys64)
 RUN C:\Temp\msys2.exe install --root C:\msys64 --confirm-command || exit 0
 
 # Delete installer
 RUN del C:\Temp\msys2.exe
 
-# Update MSYS2 in two steps (pacman needs it)
+# First update (this might update core packages and require a restart of the shell)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm || true"
+
+# Second update (to get the rest of the updates)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm || true"
 
-# Install dev tools and programming languages
+# Install required packages
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm base-devel git cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-go mingw-w64-x86_64-rust mingw-w64-x86_64-nodejs mingw-w64-x86_64-python mingw-w64-x86_64-openjdk mingw-w64-x86_64-mono"
 
-# Clean package cache
+# Clean the package cache
 RUN C:\msys64\usr\bin\bash.exe -l -c "yes | pacman -Scc"
 
-# Add MSYS2 and MinGW to PATH
+# Add to PATH
 ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;%PATH%"
 
 CMD ["cmd.exe"]
