@@ -1,6 +1,6 @@
 FROM africanfuture/windows-devbox-base
 
-#Use PowerShell for download steps
+# Use PowerShell for download steps
 
 SHELL ["powershell", "-Command"]
 
