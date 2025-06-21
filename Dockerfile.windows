@@ -3,13 +3,13 @@ FROM africanfuture/windows-devbox-base
 SHELL ["cmd", "/S", "/C"]
 
 # Download MSYS2 installer using GitHub's latest stable release link
-RUN bitsadmin /transfer msys2Download /priority foreground https://github.com/msys2/msys2-installer/releases/latest/download/msys2-x86_64.exe C:\msys2.exe
+RUN curl.exe -L -o C:\Temp\msys2.exe https://github.com/msys2/msys2-installer/releases/latest/download/msys2-x86_64.exe
 
 # Install MSYS2 silently
-RUN C:\msys2.exe install --root C:\msys64 --confirm-command || exit 0
+RUN C:\Temp\msys2.exe install --root C:\msys64 --confirm-command || exit 0
 
 # Delete installer
-RUN del C:\msys2.exe
+RUN del C:\Temp\msys2.exe
 
 # Update MSYS2 in two steps (pacman needs it)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm || true"
