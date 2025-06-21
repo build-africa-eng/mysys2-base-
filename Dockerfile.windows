@@ -2,9 +2,20 @@ FROM africanfuture/windows-devbox-base
 
 SHELL ["cmd", "/S", "/C"]
 
-# Create Temp folder and download MSYS2 tarball
-RUN mkdir C:\Temp && curl.exe -L -o C:\Temp\msys2.tar.xz https://github.com/msys2/msys2-installer/releases/download/2023-10-26/msys2-base-x86_64-20231026.tar.xz && \
-    powershell -Command "Expand-Archive -Path C:\Temp\msys2.tar.xz -DestinationPath C:\Temp && Expand-Archive -Path C:\Temp\msys2.tar -DestinationPath C:\ && Remove-Item C:\Temp\msys2.tar.xz, C:\Temp\msys2.tar"
+# Debug: Check PowerShell version
+RUN powershell -Command "$PSVersionTable.PSVersion"
+
+# Download MSYS2 tarball
+RUN mkdir C:\Temp && curl.exe -L -o C:\Temp\msys2.tar.xz https://github.com/msys2/msys2-installer/releases/download/2023-10-26/msys2-base-x86_64-20231026.tar.xz
+
+# Extract tar.xz to tar
+RUN powershell -Command "Expand-Archive -Path C:\Temp\msys2.tar.xz -DestinationPath C:\Temp"
+
+# Extract tar to C:\
+RUN powershell -Command "Expand-Archive -Path C:\Temp\msys2.tar -DestinationPath C:\"
+
+# Clean up
+RUN powershell -Command "Remove-Item C:\Temp\msys2.tar.xz, C:\Temp\msys2.tar"
 
 # First update (non-interactive)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm"
