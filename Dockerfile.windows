@@ -24,10 +24,14 @@ RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm"
 # Second update (non-interactive)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm"
 
-# Install OpenJDK 21 via Adoptium
-RUN curl.exe -L -o C:\Temp\openjdk.zip https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.4%2B7/OpenJDK21U-jdk_x64_windows_hotspot_21.0.4_7.zip && \
-    powershell -Command "Expand-Archive -Path C:\Temp\openjdk.zip -DestinationPath C:\ && Rename-Item C:\jdk-21.0.4+7 C:\openjdk" && \
-    del C:\Temp\openjdk.zip && \
+# Download OpenJDK 21
+RUN curl.exe -L -o C:\Temp\openjdk.zip https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.4%2B7/OpenJDK21U-jdk_x64_windows_hotspot_21.0.4_7.zip
+
+# Extract and rename
+RUN powershell -Command "Expand-Archive -Path C:\Temp\openjdk.zip -DestinationPath C:\; Rename-Item C:\jdk-21.0.4+7 C:\openjdk"
+
+# Clean up and update PATH
+RUN powershell -Command "Remove-Item C:\Temp\openjdk.zip" && \
     setx PATH "%PATH%;C:\openjdk\bin"
 
 # Install toolchain packages (excluding OpenJDK)
