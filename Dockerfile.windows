@@ -1,34 +1,42 @@
-# Start from Windows Server Core
 FROM africanfuture/windows-devbox-base
 
-# Use PowerShell for installer download
+Use PowerShell for download steps
+
 SHELL ["powershell", "-Command"]
 
-# Download MSYS2 installer (PowerShell-safe, BuildKit-friendly)
-RUN $ProgressPreference = 'SilentlyContinue'; `
-    Invoke-WebRequest -Uri "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20240313.exe" -OutFile "C:\\msys2.exe"
+Download MSYS2 installer
 
-# Switch to CMD shell for rest of the Dockerfile
+RUN $ProgressPreference = 'SilentlyContinue'; ` Invoke-WebRequest -Uri "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20240313.exe" -OutFile "C:\msys2.exe"
+
+Switch back to CMD shell for installation and post-install tasks
+
 SHELL ["cmd", "/S", "/C"]
 
-# Install MSYS2
+Install MSYS2 silently
+
 RUN C:\msys2.exe install --root C:\msys64 --confirm-command || exit 0
 
-# Delete installer
+Remove installer
+
 RUN del C:\msys2.exe
 
-# Update MSYS2 (bash login shell for pacman to function)
-RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm || true"
-RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm || true"
+Update MSYS2 (two phases)
 
-# Install dev tools and languages
+RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm || true" RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm || true"
+
+Install development toolchains and languages
+
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm base-devel git cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-go mingw-w64-x86_64-rust mingw-w64-x86_64-nodejs mingw-w64-x86_64-python mingw-w64-x86_64-openjdk mingw-w64-x86_64-mono"
 
-# Clean up pacman cache
+Clean pacman cache
+
 RUN C:\msys64\usr\bin\bash.exe -l -c "yes | pacman -Scc"
 
-# Set up system PATH
-ENV PATH="C:\\msys64\\usr\\bin;C:\\msys64\\mingw64\\bin;%PATH%"
+Add MSYS2 and MinGW binaries to PATH
 
-# Optional entrypoint
+ENV PATH="C:\msys64\usr\bin;C:\msys64\mingw64\bin;%PATH%"
+
+Default to CMD
+
 CMD ["cmd.exe"]
+
