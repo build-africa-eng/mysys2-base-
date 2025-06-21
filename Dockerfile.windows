@@ -22,7 +22,7 @@ RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm"
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm"
 
 # Install toolchain packages (non-interactive)
-RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm base-devel git cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-go mingw-w64-x86_64-rust mingw-w64-x86_64-nodejs mingw-w64-x86_64-python mingw-w64-x86_64-openjdk mingw-w64-x86_64-mono"
+RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm base-devel git cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-go mingw-w64-x86_64-rust mingw-w64-x86_64-nodejs mingw-w64-x86_64-python mingw-w64-x86_64-jdk17 mingw-w64-x86_64-mono"
 
 # Clean the package cache
 RUN C:\msys64\usr\bin\bash.exe -l -c "yes | pacman -Scc"
