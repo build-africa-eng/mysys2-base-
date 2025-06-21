@@ -5,17 +5,15 @@ SHELL ["cmd", "/S", "/C"]
 # Debug: Check PowerShell version
 RUN powershell -Command "$PSVersionTable.PSVersion"
 
-# Download MSYS2 tarball
-RUN mkdir C:\Temp && curl.exe -L -o C:\Temp\msys2.tar.xz https://github.com/msys2/msys2-installer/releases/download/2023-10-26/msys2-base-x86_64-20231026.tar.xz
+# Install Chocolatey and 7zip
+RUN powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && \
+    choco install -y 7zip
 
-# Extract tar.xz to tar
-RUN powershell -Command "Expand-Archive -Path C:\Temp\msys2.tar.xz -DestinationPath C:\Temp"
-
-# Extract tar to C:\
-RUN powershell -Command "Expand-Archive -Path C:\Temp\msys2.tar -DestinationPath C:\"
-
-# Clean up
-RUN powershell -Command "Remove-Item C:\Temp\msys2.tar.xz, C:\Temp\msys2.tar"
+# Download and extract MSYS2 tarball
+RUN mkdir C:\Temp && curl.exe -L -o C:\Temp\msys2.tar.xz https://github.com/msys2/msys2-installer/releases/download/2023-10-26/msys2-base-x86_64-20231026.tar.xz && \
+    7z.exe x C:\Temp\msys2.tar.xz -oC:\Temp && \
+    7z.exe x C:\Temp\msys2.tar -oC:\ && \
+    del C:\Temp\msys2.tar.xz C:\Temp\msys2.tar
 
 # First update (non-interactive)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm"
