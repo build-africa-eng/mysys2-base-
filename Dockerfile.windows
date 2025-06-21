@@ -15,14 +15,23 @@ RUN mkdir C:\Temp && curl.exe -L -o C:\Temp\msys2.tar.xz https://github.com/msys
     7z.exe x C:\Temp\msys2.tar -oC:\ && \
     del C:\Temp\msys2.tar.xz C:\Temp\msys2.tar
 
+# Refresh package database
+RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syy --noconfirm"
+
 # First update (non-interactive)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Syuu --noconfirm"
 
 # Second update (non-interactive)
 RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -Suu --noconfirm"
 
-# Install toolchain packages (non-interactive)
-RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm base-devel git cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-go mingw-w64-x86_64-rust mingw-w64-x86_64-nodejs mingw-w64-x86_64-python mingw-w64-x86_64-jdk17 mingw-w64-x86_64-mono"
+# Install OpenJDK 21 via Adoptium
+RUN curl.exe -L -o C:\Temp\openjdk.zip https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.4%2B7/OpenJDK21U-jdk_x64_windows_hotspot_21.0.4_7.zip && \
+    powershell -Command "Expand-Archive -Path C:\Temp\openjdk.zip -DestinationPath C:\ && Rename-Item C:\jdk-21.0.4+7 C:\openjdk" && \
+    del C:\Temp\openjdk.zip && \
+    setx PATH "%PATH%;C:\openjdk\bin"
+
+# Install toolchain packages (excluding OpenJDK)
+RUN C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm base-devel git cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-go mingw-w64-x86_64-rust mingw-w64-x86_64-nodejs mingw-w64-x86_64-python mingw-w64-x86_64-mono"
 
 # Clean the package cache
 RUN C:\msys64\usr\bin\bash.exe -l -c "yes | pacman -Scc"
